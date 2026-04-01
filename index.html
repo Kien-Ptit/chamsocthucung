@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Pet Feeder Ultimate</title>
+    <style>
+        :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-food: #f39c12; --primary-water: #3498db; --primary-audio: #9b59b6; --text-main: #2c3e50; --danger: #e74c3c; --success: #2ecc71; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 40px; }
+        .header { background: #fff; padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-radius: 0 0 20px 20px; font-weight: bold; font-size: 20px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 0 10px; }
+        .media-section { background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .cam-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+        .cam-container img { width: 100%; height: 100%; object-fit: cover; }
+        .live-badge { position: absolute; top: 10px; left: 10px; background: rgba(231,76,60,0.9); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .audio-controls { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-audio { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-listen { background-color: #34495e; }
+        .btn-talk { background-color: var(--primary-audio); }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .card { background: var(--card-bg); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
+        .card-title { font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
+        .card-val { font-size: 18px; font-weight: 800; }
+        .card-sub { font-size: 11px; font-weight: 500; margin-top: 2px; padding: 2px 6px; border-radius: 6px; display: inline-block; }
+        .c-food { color: var(--primary-food); } .c-water { color: var(--primary-water); }
+        .bg-ok { background: #e8f8f5; color: var(--success); } .bg-warn { background: #fdedec; color: var(--danger); }
+        .settings-box { background: #fff; padding: 15px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .set-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .set-row { margin-bottom: 15px; }
+        .set-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        input[type=range] { width: 100%; height: 6px; background: #ddd; border-radius: 5px; outline: none; -webkit-appearance: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; }
+        #sl-food::-webkit-slider-thumb { background: var(--primary-food); } #sl-water::-webkit-slider-thumb { background: var(--primary-water); }
+        .action-row { display: flex; gap: 10px; }
+        .btn-action { flex: 1; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+        .feed { background: var(--primary-food); } .pump { background: var(--primary-water); }
+    </style>
+</head>
+<body>
+    <div class="header">🐾 Trạm Thú Cưng AI</div>
+    <div class="container">
+        <div class="media-section">
+            <div class="cam-container">
+                <div class="live-badge">● LIVE</div>
+                <img id="cam-stream" src="" onerror="this.src='https://via.placeholder.com/400x300?text=Camera+ESP32'">
+            </div>
+            <div class="audio-controls">
+                <button class="btn-audio btn-listen" onclick="wakeUp()"><span id="ic-listen">🔊</span> ĐÁNH THỨC CAM</button>
+                <button class="btn-audio btn-talk" onclick="wakeUp()"><span>🎤</span> GIỮ ĐỂ NÓI</button>
+            </div>
+        </div>
+
+        <div class="grid-4">
+            <div class="card">
+                <div class="card-title">Bát Thức Ăn</div>
+                <div class="card-val c-food"><span id="bowl-food">0</span>g</div>
+                <div class="card-sub bg-ok" id="stt-bowl-food">Đang trống</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Khay Nước</div>
+                <div class="card-val c-water" id="bowl-water">--</div>
+                <div class="card-sub bg-ok" id="stt-bowl-water">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Kho Hạt Tổng</div>
+                <div class="card-val c-food">100%</div>
+                <div class="card-sub bg-ok">Còn đầy</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Bình Nước Tổng</div>
+                <div class="card-val c-water" id="tank-water">--</div>
+                <div class="card-sub bg-ok" id="stt-tank-water">--</div>
+            </div>
+        </div>
+
+        <div class="settings-box">
+            <div class="set-title">⚙️ Điều chỉnh giới hạn</div>
+            <div class="set-row">
+                <div class="set-label"><span>Mức bát đầy (Gram):</span><span class="c-food"><span id="val-sl-food">50</span> g</span></div>
+                <input type="range" id="sl-food" min="10" max="200" step="5" value="50" onchange="updateSettings()">
+            </div>
+            <div class="set-row">
+                <div class="set-label"><span>Thời gian bơm mỗi lần:</span><span class="c-water"><span id="val-sl-water">3</span> s</span></div>
+                <input type="range" id="sl-water" min="1" max="20" step="1" value="3" onchange="updateSettings()">
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button class="btn-action feed" onclick="sendAction('feed')"><span style="font-size: 20px;">🦴</span> NHẢ HẠT</button>
+            <button class="btn-action pump" onclick="sendAction('pump')"><span style="font-size: 20px;">💦</span> BƠM NƯỚC</button>
+        </div>
+    </div>
+
+    <script>
+        // Tự động set link luồng Camera theo IP của mạch
+        document.getElementById('cam-stream').src = "http://" + window.location.hostname + ":81/stream";
+
+        function wakeUp() { fetch('/api/wake'); }
+
+        function sendAction(cmd) {
+            wakeUp(); 
+            fetch('/api/action?cmd=' + cmd)
+                .then(res => alert(cmd === 'feed' ? 'Đã gửi lệnh Nhả hạt!' : 'Đã gửi lệnh Bơm nước!'));
+        }
+
+        function updateSettings() {
+            let f = document.getElementById('sl-food').value;
+            let w = document.getElementById('sl-water').value;
+            document.getElementById('val-sl-food').innerText = f;
+            document.getElementById('val-sl-water').innerText = w;
+            fetch(`/api/settings?f=${f}&w=${w}`);
+            wakeUp();
+        }
+
+        // Tự động lấy trạng thái từ ESP32 mỗi 2 giây
+        setInterval(() => {
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('bowl-food').innerText = data.weight;
+                    document.getElementById('stt-bowl-food').innerText = data.weight >= data.limit ? "Đã đầy" : "Bình thường";
+                    document.getElementById('stt-bowl-food').className = data.weight >= data.limit ? "card-sub bg-warn" : "card-sub bg-ok";
+                    
+                    document.getElementById('bowl-water').innerText = data.waterBowl ? "CẠN" : "ĐẦY"; // LOW trên Wokwi là Cạn
+                    document.getElementById('stt-bowl-water').innerText = data.waterBowl ? "Cần bơm" : "Sẵn sàng";
+                    document.getElementById('stt-bowl-water').className = data.waterBowl ? "card-sub bg-warn" : "card-sub bg-ok";
+
+                    document.getElementById('tank-water').innerText = data.waterTank ? "CÒN" : "HẾT"; // HIGH trên Wokwi là Đầy
+                    document.getElementById('stt-tank-water').innerText = data.waterTank ? "Sẵn sàng" : "Châm thêm!";
+                    document.getElementById('stt-tank-water').className = data.waterTank ? "card-sub bg-ok" : "card-sub bg-warn";
+                    
+                    // Cập nhật lại thanh gạt từ mạch (nếu mạch bị reset)
+                    document.getElementById('val-sl-food').innerText = data.limit;
+                    document.getElementById('sl-food').value = data.limit;
+                });
+        }, 2000);
+    </script>
+</body>
+</html>
