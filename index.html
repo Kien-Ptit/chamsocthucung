@@ -12,19 +12,20 @@
         .header { background: #fff; padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-radius: 0 0 20px 20px; font-weight: bold; font-size: 20px; }
         .container { max-width: 500px; margin: 0 auto; padding: 0 10px; }
         
-        /* Box chung cho các khu vực */
+        /* Box chung */
         .box-section { background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .box-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         
+        /* Camera & Audio */
         .cam-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
         .cam-container img { width: 100%; height: 100%; object-fit: cover; }
         .live-badge { position: absolute; top: 10px; left: 10px; background: rgba(231,76,60,0.9); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-        
         .audio-controls { display: flex; gap: 10px; margin-top: 10px; }
         .btn-audio { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-listen { background-color: #34495e; }
         .btn-talk { background-color: var(--primary-audio); }
         
+        /* Grid 4 Thông số */
         .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .card { background: var(--card-bg); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
         .card-title { font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
@@ -33,10 +34,16 @@
         .c-food { color: var(--primary-food); } .c-water { color: var(--primary-water); }
         .bg-ok { background: #e8f8f5; color: var(--success); } .bg-warn { background: #fdedec; color: var(--danger); }
         
+        /* Nút Điều khiển */
         .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .btn-action { flex: 1; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
         .feed { background: var(--primary-food); } .pump { background: var(--primary-water); }
 
+        /* Lịch trình */
+        .sch-item { display: flex; justify-content: space-between; background: #f9f9f9; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; border: 1px solid #eee;}
+        .btn-add { width: 100%; padding: 12px; border: 2px dashed #ccc; background: #fafafa; border-radius: 8px; cursor: pointer; color: #666; font-weight: bold; }
+        
+        /* Cài đặt Slider */
         .set-row { margin-bottom: 15px; }
         .set-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
         input[type=range] { width: 100%; height: 6px; background: #ddd; border-radius: 5px; outline: none; -webkit-appearance: none; }
@@ -44,12 +51,13 @@
         #sl-food::-webkit-slider-thumb, #sl-daily::-webkit-slider-thumb { background: var(--primary-food); } 
         #sl-water::-webkit-slider-thumb { background: var(--primary-water); }
 
-        /* CSS Mới cho Lịch trình & Nhật ký */
-        .sch-item { display: flex; justify-content: space-between; background: #f9f9f9; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; border: 1px solid #eee;}
-        .btn-add { width: 100%; padding: 12px; border: 2px dashed #ccc; background: #fafafa; border-radius: 8px; cursor: pointer; color: #666; font-weight: bold; }
+        /* Nhật ký */
         #log-container { font-size: 12px; color: #555; max-height: 150px; overflow-y: auto; }
         .log-line { padding: 6px 0; border-bottom: 1px dashed #eee; }
         .log-time { color: #999; font-weight: bold; margin-right: 5px; }
+        
+        /* Chỉnh Canvas Biểu đồ */
+        .chart-container { position: relative; height: 200px; width: 100%; }
     </style>
 </head>
 <body>
@@ -102,8 +110,10 @@
         </div>
 
         <div class="box-section">
-            <div class="box-title">📊 Thống kê bát thức ăn</div>
-            <canvas id="foodChart" height="180"></canvas>
+            <div class="box-title">📊 Thống kê lượng ăn trong ngày (24h)</div>
+            <div class="chart-container">
+                <canvas id="foodChart"></canvas>
+            </div>
         </div>
 
         <div class="box-section">
@@ -138,15 +148,30 @@
         let myChart;
         let schedules = [];
 
-        // Khởi tạo Biểu đồ
+        // Khởi tạo Biểu đồ 24 Giờ (Bar Chart)
         const ctx = document.getElementById('foodChart').getContext('2d');
         myChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
-                labels: ['10p trước', '8p trước', '6p trước', '4p trước', '2p trước', 'Vừa xong'],
-                datasets: [{ label: 'Gram trong bát', data: [0, 0, 0, 0, 0, 0], borderColor: '#f39c12', tension: 0.4, fill: true, backgroundColor: 'rgba(243, 156, 18, 0.1)' }]
+                labels: Array.from({length: 24}, (_, i) => i + 'h'),
+                datasets: [{ 
+                    label: 'Gram thức ăn', 
+                    data: new Array(24).fill(0), 
+                    backgroundColor: 'rgba(243, 156, 18, 0.7)',
+                    borderColor: '#f39c12',
+                    borderWidth: 1,
+                    borderRadius: 3
+                }]
             },
-            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, suggestedMax: 100 } } }
+            options: { 
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    y: { beginAtZero: true, suggestedMax: 50 },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                } 
+            }
         });
 
         // Xử lý dữ liệu nhận từ ESP32 & Đám mây
@@ -157,12 +182,12 @@
                 document.getElementById('cam-stream').src = url;
                 document.getElementById('cam-stream').onload = () => URL.revokeObjectURL(url);
             } 
-            // 2. Nếu là Dữ liệu JSON (Thông số, Lịch trình, Nhật ký)
+            // 2. Nếu là Dữ liệu JSON
             else {
                 try {
                     let data = JSON.parse(event.data);
                     
-                    // Nạp dữ liệu Lịch trình & Log lúc mới vào web
+                    // Nạp dữ liệu Init lúc mới vào web
                     if (data.type === 'init') {
                         schedules = data.schedules || [];
                         renderSchedules();
@@ -172,17 +197,17 @@
                         }
                     }
 
-                    // Cập nhật 4 Ô Thông Số cũ
+                    // Cập nhật Biểu đồ 24h
+                    if (data.type === 'hourly_update') {
+                        myChart.data.datasets[0].data = data.hourlyData;
+                        myChart.update();
+                    }
+
+                    // Cập nhật 4 Ô Thông Số
                     if (data.weight !== undefined) {
                         document.getElementById('bowl-food').innerText = data.weight;
                         document.getElementById('stt-bowl-food').innerText = data.weight >= (data.limit||50) ? "Đã đầy" : "Bình thường";
                         document.getElementById('stt-bowl-food').className = data.weight >= (data.limit||50) ? "card-sub bg-warn" : "card-sub bg-ok";
-                        
-                        // Cập nhật Biểu đồ (đẩy dữ liệu mới vào cuối)
-                        let dArr = myChart.data.datasets[0].data;
-                        dArr.shift(); // Xóa cũ nhất
-                        dArr.push(data.weight); // Thêm mới nhất
-                        myChart.update();
                     }
                     if (data.totalFoodToday !== undefined) {
                         document.getElementById('food-today').innerText = data.totalFoodToday;
@@ -209,19 +234,15 @@
             }
         };
 
-        // Hàm tương tác cũ
-        function wakeUp() { 
-            /* Thức dậy ESP32 (Sẽ cấu hình sau ở ESP32) */ 
-        }
+        function wakeUp() { /* Hàm đánh thức Camera từ Web */ }
 
         function sendAction(cmd) {
-            // Gửi thẳng qua WebSocket (Nhanh hơn fetch rất nhiều)
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(cmd);
                 addLogToUI(cmd === 'feed' ? "Chủ nhân vừa nhả hạt thủ công" : "Chủ nhân vừa bơm nước thủ công");
                 alert(cmd === 'feed' ? 'Đã gửi lệnh Nhả hạt!' : 'Đã gửi lệnh Bơm nước!');
             } else {
-                alert('Mất kết nối Internet!');
+                alert('Mất kết nối với Đám mây!');
             }
         }
 
@@ -234,14 +255,12 @@
             document.getElementById('val-sl-food').innerText = f;
             document.getElementById('val-sl-water').innerText = w;
             
-            // Gửi dữ liệu cấu hình lên mây dưới dạng chuỗi JSON
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'settings', dailyLimit: daily, feedLimit: f, pumpTime: w }));
-                addLogToUI("Đã thay đổi cài đặt giới hạn");
+                addLogToUI("Đã cập nhật các thông số giới hạn");
             }
         }
 
-        // --- CÁC HÀM CHO TÍNH NĂNG MỚI ---
         function renderSchedules() {
             const list = document.getElementById('schedule-list');
             if(schedules.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; margin-bottom:10px; font-size:13px;">Chưa có lịch trình nào</div>'; return; }
