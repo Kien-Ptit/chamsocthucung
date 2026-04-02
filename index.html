@@ -2,139 +2,286 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Pet Station Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Pet Feeder Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --p-food: #f39c12; --p-water: #3498db; --bg: #f0f2f5; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 10px; }
-        .container { max-width: 500px; margin: 0 auto; }
-        .section { background: #fff; padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .title { font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-food: #f39c12; --primary-water: #3498db; --primary-audio: #9b59b6; --text-main: #2c3e50; --danger: #e74c3c; --success: #2ecc71; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 40px; }
+        .header { background: #fff; padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-radius: 0 0 20px 20px; font-weight: bold; font-size: 20px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 0 10px; }
         
-        /* CSS cho Lịch trình (1) */
-        .sch-item { display: flex; justify-content: space-between; background: #f9f9f9; padding: 8px 12px; border-radius: 8px; margin-bottom: 5px; font-size: 14px; }
-        .btn-add { width: 100%; padding: 10px; border: 2px dashed #ccc; background: none; border-radius: 8px; cursor: pointer; color: #666; }
+        /* Box chung cho các khu vực */
+        .box-section { background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .box-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        
+        .cam-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+        .cam-container img { width: 100%; height: 100%; object-fit: cover; }
+        .live-badge { position: absolute; top: 10px; left: 10px; background: rgba(231,76,60,0.9); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        
+        .audio-controls { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-audio { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-listen { background-color: #34495e; }
+        .btn-talk { background-color: var(--primary-audio); }
+        
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .card { background: var(--card-bg); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
+        .card-title { font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
+        .card-val { font-size: 18px; font-weight: 800; }
+        .card-sub { font-size: 11px; font-weight: 500; margin-top: 2px; padding: 2px 6px; border-radius: 6px; display: inline-block; }
+        .c-food { color: var(--primary-food); } .c-water { color: var(--primary-water); }
+        .bg-ok { background: #e8f8f5; color: var(--success); } .bg-warn { background: #fdedec; color: var(--danger); }
+        
+        .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-action { flex: 1; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+        .feed { background: var(--primary-food); } .pump { background: var(--primary-water); }
 
-        /* CSS cho Nhật ký (3) */
-        #log-container { font-size: 12px; color: #555; max-height: 120px; overflow-y: auto; }
-        .log-line { padding: 4px 0; border-bottom: 1px dashed #eee; }
+        .set-row { margin-bottom: 15px; }
+        .set-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        input[type=range] { width: 100%; height: 6px; background: #ddd; border-radius: 5px; outline: none; -webkit-appearance: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; }
+        #sl-food::-webkit-slider-thumb, #sl-daily::-webkit-slider-thumb { background: var(--primary-food); } 
+        #sl-water::-webkit-slider-thumb { background: var(--primary-water); }
+
+        /* CSS Mới cho Lịch trình & Nhật ký */
+        .sch-item { display: flex; justify-content: space-between; background: #f9f9f9; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; border: 1px solid #eee;}
+        .btn-add { width: 100%; padding: 12px; border: 2px dashed #ccc; background: #fafafa; border-radius: 8px; cursor: pointer; color: #666; font-weight: bold; }
+        #log-container { font-size: 12px; color: #555; max-height: 150px; overflow-y: auto; }
+        .log-line { padding: 6px 0; border-bottom: 1px dashed #eee; }
         .log-time { color: #999; font-weight: bold; margin-right: 5px; }
-
-        /* Camera & Thống kê cũ giữ nguyên cấu trúc cũ nhưng gom lại */
-        .cam-box { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
-        .cam-box img { width: 100%; height: 100%; object-fit: cover; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .card { background: #fff; padding: 10px; border-radius: 12px; text-align: center; }
-        .btn-main { padding: 15px; border: none; border-radius: 12px; color: #fff; font-weight: bold; cursor: pointer; flex: 1; }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="section">
-        <div class="cam-box"><img id="cam-stream" src=""></div>
-        <div style="display:flex; gap:10px;">
-            <button class="btn-main" style="background:var(--p-food)" onclick="sendAction('feed')">🦴 NHẢ HẠT</button>
-            <button class="btn-main" style="background:var(--p-water)" onclick="sendAction('pump')">💦 BƠM NƯỚC</button>
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="title">⏰ Lịch trình ăn tự động</div>
-        <div id="schedule-list"></div>
-        <button class="btn-add" onclick="addSchedule()">+ Thêm khung giờ mới</button>
-    </div>
-
-    <div class="section">
-        <div class="title">📊 Thống kê lượng ăn (24h)</div>
-        <canvas id="foodChart" height="200"></canvas>
-    </div>
-
-    <div class="section">
-        <div class="title">📜 Nhật ký hệ thống</div>
-        <div id="log-container"></div>
-    </div>
-</div>
-
-<script>
-    const HOST = location.origin.replace(/^http/, 'ws');
-    const ws = new WebSocket(HOST);
-    ws.binaryType = 'blob';
-
-    let myChart;
-    let schedules = [];
-
-    // Khởi tạo Biểu đồ (Tính năng 2)
-    const ctx = document.getElementById('foodChart').getContext('2d');
-    myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['0h', '4h', '8h', '12h', '16h', '20h', 'Bây giờ'],
-            datasets: [{ label: 'Gram', data: [0, 0, 45, 0, 30, 0, 0], borderColor: '#f39c12', tension: 0.4, fill: true, backgroundColor: 'rgba(243, 156, 18, 0.1)' }]
-        },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-    });
-
-    ws.onmessage = (event) => {
-        if (event.data instanceof Blob) {
-            document.getElementById('cam-stream').src = URL.createObjectURL(event.data);
-        } else {
-            let msg = JSON.parse(event.data);
-            if (msg.type === 'init') {
-                schedules = msg.schedules;
-                renderSchedules();
-                msg.activityLogs.forEach(addLogToUI);
-            }
-            // Tự động cập nhật biểu đồ nếu ESP32 gửi số liệu cân nặng
-            if (msg.weight !== undefined) {
-                myChart.data.datasets[0].data[6] = msg.weight;
-                myChart.update();
-            }
-        }
-    };
-
-    // Tính năng 1: Lịch trình
-    function renderSchedules() {
-        const list = document.getElementById('schedule-list');
-        list.innerHTML = schedules.map((s, i) => `
-            <div class="sch-item">
-                <span><b>${s.time}</b> - ${s.amount}g</span>
-                <span style="color:red; cursor:pointer" onclick="removeSch(${i})">Xóa</span>
+    <div class="header">🐾 Trạm Thú Cưng AI</div>
+    <div class="container">
+        
+        <div class="box-section" style="padding: 10px;">
+            <div class="cam-container">
+                <div class="live-badge">● LIVE</div>
+                <img id="cam-stream" src="" onerror="this.src='https://via.placeholder.com/400x300?text=Camera+ESP32'">
             </div>
-        `).join('');
-    }
+            <div class="audio-controls">
+                <button class="btn-audio btn-listen" onclick="wakeUp()"><span>🔊</span> ĐÁNH THỨC CAM</button>
+                <button class="btn-audio btn-talk" onclick="wakeUp()"><span>🎤</span> GIỮ ĐỂ NÓI</button>
+            </div>
+        </div>
 
-    function addSchedule() {
-        let time = prompt("Nhập giờ (VD: 07:30):");
-        let amount = prompt("Nhập lượng hạt (Gram):");
-        if(time && amount) {
-            schedules.push({ time, amount });
-            renderSchedules();
-            ws.send(JSON.stringify({ type: 'set_schedule', data: schedules }));
-            addLogToUI("Đã thêm lịch trình: " + time);
+        <div class="grid-4">
+            <div class="card">
+                <div class="card-title">Bát Thức Ăn</div>
+                <div class="card-val c-food"><span id="bowl-food">0</span>g</div>
+                <div class="card-sub bg-ok" id="stt-bowl-food">Đang trống</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Hôm Nay Đã Ăn</div>
+                <div class="card-val c-food"><span id="food-today">0</span>g</div>
+                <div class="card-sub bg-ok" id="stt-food-today">Tối đa: <span id="limit-display">150</span>g</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Khay Nước</div>
+                <div class="card-val c-water" id="bowl-water">--</div>
+                <div class="card-sub bg-ok" id="stt-bowl-water">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Bình Nước Tổng</div>
+                <div class="card-val c-water" id="tank-water">--</div>
+                <div class="card-sub bg-ok" id="stt-tank-water">--</div>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button class="btn-action feed" onclick="sendAction('feed')"><span style="font-size: 20px;">🦴</span> NHẢ HẠT NGAY</button>
+            <button class="btn-action pump" onclick="sendAction('pump')"><span style="font-size: 20px;">💦</span> BƠM NƯỚC</button>
+        </div>
+
+        <div class="box-section">
+            <div class="box-title">⏰ Lịch trình ăn tự động</div>
+            <div id="schedule-list"></div>
+            <button class="btn-add" onclick="addSchedule()">+ Thêm khung giờ mới</button>
+        </div>
+
+        <div class="box-section">
+            <div class="box-title">📊 Thống kê bát thức ăn</div>
+            <canvas id="foodChart" height="180"></canvas>
+        </div>
+
+        <div class="box-section">
+            <div class="box-title">⚙️ Cài đặt & Giới hạn</div>
+            <div class="set-row">
+                <div class="set-label"><span>Giới hạn ăn 1 ngày:</span><span class="c-food"><span id="val-sl-daily">150</span> g</span></div>
+                <input type="range" id="sl-daily" min="50" max="500" step="10" value="150" onchange="updateSettings()">
+            </div>
+            <div class="set-row">
+                <div class="set-label"><span>Mức bát đầy (mỗi lần nhả):</span><span class="c-food"><span id="val-sl-food">50</span> g</span></div>
+                <input type="range" id="sl-food" min="10" max="200" step="5" value="50" onchange="updateSettings()">
+            </div>
+            <div class="set-row">
+                <div class="set-label"><span>Thời gian bơm mỗi lần:</span><span class="c-water"><span id="val-sl-water">3</span> s</span></div>
+                <input type="range" id="sl-water" min="1" max="20" step="1" value="3" onchange="updateSettings()">
+            </div>
+        </div>
+
+        <div class="box-section">
+            <div class="box-title">📜 Nhật ký hệ thống</div>
+            <div id="log-container"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // Bắt sóng Server Đám Mây Render qua WebSocket
+        const HOST = location.origin.replace(/^http/, 'ws');
+        const ws = new WebSocket(HOST);
+        ws.binaryType = 'blob';
+
+        let myChart;
+        let schedules = [];
+
+        // Khởi tạo Biểu đồ
+        const ctx = document.getElementById('foodChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['10p trước', '8p trước', '6p trước', '4p trước', '2p trước', 'Vừa xong'],
+                datasets: [{ label: 'Gram trong bát', data: [0, 0, 0, 0, 0, 0], borderColor: '#f39c12', tension: 0.4, fill: true, backgroundColor: 'rgba(243, 156, 18, 0.1)' }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, suggestedMax: 100 } } }
+        });
+
+        // Xử lý dữ liệu nhận từ ESP32 & Đám mây
+        ws.onmessage = (event) => {
+            // 1. Nếu là Video Camera
+            if (event.data instanceof Blob) {
+                const url = URL.createObjectURL(event.data);
+                document.getElementById('cam-stream').src = url;
+                document.getElementById('cam-stream').onload = () => URL.revokeObjectURL(url);
+            } 
+            // 2. Nếu là Dữ liệu JSON (Thông số, Lịch trình, Nhật ký)
+            else {
+                try {
+                    let data = JSON.parse(event.data);
+                    
+                    // Nạp dữ liệu Lịch trình & Log lúc mới vào web
+                    if (data.type === 'init') {
+                        schedules = data.schedules || [];
+                        renderSchedules();
+                        if(data.activityLogs) {
+                            document.getElementById('log-container').innerHTML = '';
+                            data.activityLogs.forEach(addLogToUI);
+                        }
+                    }
+
+                    // Cập nhật 4 Ô Thông Số cũ
+                    if (data.weight !== undefined) {
+                        document.getElementById('bowl-food').innerText = data.weight;
+                        document.getElementById('stt-bowl-food').innerText = data.weight >= (data.limit||50) ? "Đã đầy" : "Bình thường";
+                        document.getElementById('stt-bowl-food').className = data.weight >= (data.limit||50) ? "card-sub bg-warn" : "card-sub bg-ok";
+                        
+                        // Cập nhật Biểu đồ (đẩy dữ liệu mới vào cuối)
+                        let dArr = myChart.data.datasets[0].data;
+                        dArr.shift(); // Xóa cũ nhất
+                        dArr.push(data.weight); // Thêm mới nhất
+                        myChart.update();
+                    }
+                    if (data.totalFoodToday !== undefined) {
+                        document.getElementById('food-today').innerText = data.totalFoodToday;
+                        document.getElementById('limit-display').innerText = data.dailyLimit || 150;
+                        if (data.totalFoodToday >= (data.dailyLimit || 150)) {
+                            document.getElementById('stt-food-today').innerText = "Hết tiêu chuẩn!";
+                            document.getElementById('stt-food-today').className = "card-sub bg-warn";
+                        } else {
+                            document.getElementById('stt-food-today').innerText = `Còn ${(data.dailyLimit || 150) - data.totalFoodToday}g`;
+                            document.getElementById('stt-food-today').className = "card-sub bg-ok";
+                        }
+                    }
+                    if (data.waterBowl !== undefined) {
+                        document.getElementById('bowl-water').innerText = data.waterBowl ? "CẠN" : "ĐẦY";
+                        document.getElementById('stt-bowl-water').innerText = data.waterBowl ? "Cần bơm" : "Sẵn sàng";
+                        document.getElementById('stt-bowl-water').className = data.waterBowl ? "card-sub bg-warn" : "card-sub bg-ok";
+                    }
+                    if (data.waterTank !== undefined) {
+                        document.getElementById('tank-water').innerText = data.waterTank ? "CÒN" : "HẾT"; 
+                        document.getElementById('stt-tank-water').innerText = data.waterTank ? "Sẵn sàng" : "Châm thêm!";
+                        document.getElementById('stt-tank-water').className = data.waterTank ? "card-sub bg-ok" : "card-sub bg-warn";
+                    }
+                } catch(e) {}
+            }
+        };
+
+        // Hàm tương tác cũ
+        function wakeUp() { 
+            /* Thức dậy ESP32 (Sẽ cấu hình sau ở ESP32) */ 
         }
-    }
 
-    function removeSch(i) {
-        schedules.splice(i, 1);
-        renderSchedules();
-        ws.send(JSON.stringify({ type: 'set_schedule', data: schedules }));
-    }
+        function sendAction(cmd) {
+            // Gửi thẳng qua WebSocket (Nhanh hơn fetch rất nhiều)
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(cmd);
+                addLogToUI(cmd === 'feed' ? "Chủ nhân vừa nhả hạt thủ công" : "Chủ nhân vừa bơm nước thủ công");
+                alert(cmd === 'feed' ? 'Đã gửi lệnh Nhả hạt!' : 'Đã gửi lệnh Bơm nước!');
+            } else {
+                alert('Mất kết nối Internet!');
+            }
+        }
 
-    // Tính năng 3: Nhật ký
-    function addLogToUI(text) {
-        const container = document.getElementById('log-container');
-        const now = new Date();
-        const timeStr = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
-        container.innerHTML = `<div class="log-line"><span class="log-time">[${timeStr}]</span> ${text}</div>` + container.innerHTML;
-        // Gửi log về server để lưu lại cho người sau vào xem
-        if (!text.includes("init")) ws.send(JSON.stringify({ type: 'log', text: text }));
-    }
+        function updateSettings() {
+            let daily = document.getElementById('sl-daily').value;
+            let f = document.getElementById('sl-food').value;
+            let w = document.getElementById('sl-water').value;
+            
+            document.getElementById('val-sl-daily').innerText = daily;
+            document.getElementById('val-sl-food').innerText = f;
+            document.getElementById('val-sl-water').innerText = w;
+            
+            // Gửi dữ liệu cấu hình lên mây dưới dạng chuỗi JSON
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'settings', dailyLimit: daily, feedLimit: f, pumpTime: w }));
+                addLogToUI("Đã thay đổi cài đặt giới hạn");
+            }
+        }
 
-    function sendAction(cmd) {
-        ws.send(cmd);
-        addLogToUI(cmd === 'feed' ? "Lệnh nhả hạt thủ công" : "Lệnh bơm nước thủ công");
-    }
-</script>
+        // --- CÁC HÀM CHO TÍNH NĂNG MỚI ---
+        function renderSchedules() {
+            const list = document.getElementById('schedule-list');
+            if(schedules.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; margin-bottom:10px; font-size:13px;">Chưa có lịch trình nào</div>'; return; }
+            list.innerHTML = schedules.map((s, i) => `
+                <div class="sch-item">
+                    <span><span style="font-size:16px;">⏱️</span> <b>${s.time}</b> - Nhả ${s.amount}g</span>
+                    <span style="color:var(--danger); cursor:pointer; font-weight:bold;" onclick="removeSch(${i})">XÓA</span>
+                </div>
+            `).join('');
+        }
+
+        function addSchedule() {
+            let time = prompt("Nhập giờ cho ăn (Ví dụ: 07:30):");
+            if(!time) return;
+            let amount = prompt("Nhập lượng hạt muốn nhả (Gram):", "50");
+            if(time && amount) {
+                schedules.push({ time, amount });
+                renderSchedules();
+                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_schedule', data: schedules }));
+                addLogToUI("Đã thêm lịch ăn lúc " + time);
+            }
+        }
+
+        function removeSch(i) {
+            if(confirm("Xóa lịch này?")) {
+                let t = schedules[i].time;
+                schedules.splice(i, 1);
+                renderSchedules();
+                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_schedule', data: schedules }));
+                addLogToUI("Đã xóa lịch lúc " + t);
+            }
+        }
+
+        function addLogToUI(text) {
+            const container = document.getElementById('log-container');
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            container.innerHTML = `<div class="log-line"><span class="log-time">[${timeStr}]</span> ${text}</div>` + container.innerHTML;
+            if (!text.includes("init") && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'log', text: text }));
+        }
+    </script>
 </body>
 </html>
