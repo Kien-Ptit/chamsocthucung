@@ -31,7 +31,8 @@
         .set-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
         input[type=range] { width: 100%; height: 6px; background: #ddd; border-radius: 5px; outline: none; -webkit-appearance: none; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; }
-        #sl-food::-webkit-slider-thumb { background: var(--primary-food); } #sl-water::-webkit-slider-thumb { background: var(--primary-water); }
+        #sl-food::-webkit-slider-thumb, #sl-daily::-webkit-slider-thumb { background: var(--primary-food); } 
+        #sl-water::-webkit-slider-thumb { background: var(--primary-water); }
         .action-row { display: flex; gap: 10px; }
         .btn-action { flex: 1; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
         .feed { background: var(--primary-food); } .pump { background: var(--primary-water); }
@@ -58,14 +59,14 @@
                 <div class="card-sub bg-ok" id="stt-bowl-food">Đang trống</div>
             </div>
             <div class="card">
+                <div class="card-title">Hôm Nay Đã Ăn</div>
+                <div class="card-val c-food"><span id="food-today">0</span>g</div>
+                <div class="card-sub bg-ok" id="stt-food-today">Mức tối đa: <span id="limit-display">150</span>g</div>
+            </div>
+            <div class="card">
                 <div class="card-title">Khay Nước</div>
                 <div class="card-val c-water" id="bowl-water">--</div>
                 <div class="card-sub bg-ok" id="stt-bowl-water">--</div>
-            </div>
-            <div class="card">
-                <div class="card-title">Kho Hạt Tổng</div>
-                <div class="card-val c-food">100%</div>
-                <div class="card-sub bg-ok">Còn đầy</div>
             </div>
             <div class="card">
                 <div class="card-title">Bình Nước Tổng</div>
@@ -75,9 +76,13 @@
         </div>
 
         <div class="settings-box">
-            <div class="set-title">⚙️ Điều chỉnh giới hạn</div>
+            <div class="set-title">⚙️ Cài đặt & Giới hạn</div>
             <div class="set-row">
-                <div class="set-label"><span>Mức bát đầy (Gram):</span><span class="c-food"><span id="val-sl-food">50</span> g</span></div>
+                <div class="set-label"><span>Giới hạn ăn 1 ngày:</span><span class="c-food"><span id="val-sl-daily">150</span> g</span></div>
+                <input type="range" id="sl-daily" min="50" max="500" step="10" value="150" onchange="updateSettings()">
+            </div>
+            <div class="set-row">
+                <div class="set-label"><span>Mức bát đầy (mỗi lần nhả):</span><span class="c-food"><span id="val-sl-food">50</span> g</span></div>
                 <input type="range" id="sl-food" min="10" max="200" step="5" value="50" onchange="updateSettings()">
             </div>
             <div class="set-row">
@@ -105,11 +110,16 @@
         }
 
         function updateSettings() {
+            let daily = document.getElementById('sl-daily').value;
             let f = document.getElementById('sl-food').value;
             let w = document.getElementById('sl-water').value;
+            
+            document.getElementById('val-sl-daily').innerText = daily;
             document.getElementById('val-sl-food').innerText = f;
             document.getElementById('val-sl-water').innerText = w;
-            fetch(`/api/settings?f=${f}&w=${w}`);
+            
+            // Gửi dữ liệu cài đặt về mạch ESP32
+            fetch(`/api/settings?daily=${daily}&f=${f}&w=${w}`);
             wakeUp();
         }
 
@@ -118,21 +128,34 @@
             fetch('/api/status')
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('bowl-food').innerText = data.weight;
+                    // Cập nhật Cân nặng hiện tại ở bát
+                    document.getElementById('bowl-food').innerText = data.weight || 0;
                     document.getElementById('stt-bowl-food').innerText = data.weight >= data.limit ? "Đã đầy" : "Bình thường";
                     document.getElementById('stt-bowl-food').className = data.weight >= data.limit ? "card-sub bg-warn" : "card-sub bg-ok";
                     
-                    document.getElementById('bowl-water').innerText = data.waterBowl ? "CẠN" : "ĐẦY"; // LOW trên Wokwi là Cạn
+                    // Cập nhật Khẩu phần Hôm nay
+                    document.getElementById('food-today').innerText = data.totalFoodToday || 0;
+                    document.getElementById('limit-display').innerText = data.dailyLimit || 150;
+                    if ((data.totalFoodToday || 0) >= (data.dailyLimit || 150)) {
+                        document.getElementById('stt-food-today').innerText = "Hết tiêu chuẩn!";
+                        document.getElementById('stt-food-today').className = "card-sub bg-warn";
+                    } else {
+                        document.getElementById('stt-food-today').innerText = `Còn ${(data.dailyLimit || 150) - (data.totalFoodToday || 0)}g`;
+                        document.getElementById('stt-food-today').className = "card-sub bg-ok";
+                    }
+
+                    // Cập nhật Cảm biến nước (Bowl & Tank)
+                    document.getElementById('bowl-water').innerText = data.waterBowl ? "CẠN" : "ĐẦY";
                     document.getElementById('stt-bowl-water').innerText = data.waterBowl ? "Cần bơm" : "Sẵn sàng";
                     document.getElementById('stt-bowl-water').className = data.waterBowl ? "card-sub bg-warn" : "card-sub bg-ok";
 
-                    document.getElementById('tank-water').innerText = data.waterTank ? "CÒN" : "HẾT"; // HIGH trên Wokwi là Đầy
+                    document.getElementById('tank-water').innerText = data.waterTank ? "CÒN" : "HẾT"; 
                     document.getElementById('stt-tank-water').innerText = data.waterTank ? "Sẵn sàng" : "Châm thêm!";
                     document.getElementById('stt-tank-water').className = data.waterTank ? "card-sub bg-ok" : "card-sub bg-warn";
                     
-                    // Cập nhật lại thanh gạt từ mạch (nếu mạch bị reset)
-                    document.getElementById('val-sl-food').innerText = data.limit;
-                    document.getElementById('sl-food').value = data.limit;
+                    // Cập nhật lại thanh gạt từ mạch (tránh sai lệch khi reset mạch)
+                    if(data.limit) { document.getElementById('val-sl-food').innerText = data.limit; document.getElementById('sl-food').value = data.limit; }
+                    if(data.dailyLimit) { document.getElementById('val-sl-daily').innerText = data.dailyLimit; document.getElementById('sl-daily').value = data.dailyLimit; }
                 });
         }, 2000);
     </script>
