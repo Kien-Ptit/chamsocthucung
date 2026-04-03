@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Pet Feeder Ultimate</title>
+    <title>Smart Pet Feeder - Firebase Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
     <style>
         :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-food: #f39c12; --primary-water: #3498db; --primary-audio: #9b59b6; --text-main: #2c3e50; --danger: #e74c3c; --success: #2ecc71; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -12,20 +15,19 @@
         .header { background: #fff; padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; border-radius: 0 0 20px 20px; font-weight: bold; font-size: 20px; }
         .container { max-width: 500px; margin: 0 auto; padding: 0 10px; }
         
-        /* Box chung */
         .box-section { background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .box-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         
-        /* Camera & Audio */
         .cam-container { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
         .cam-container img { width: 100%; height: 100%; object-fit: cover; }
         .live-badge { position: absolute; top: 10px; left: 10px; background: rgba(231,76,60,0.9); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        
         .audio-controls { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-audio { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-audio { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; }
+        .btn-audio:active { transform: scale(0.95); }
         .btn-listen { background-color: #34495e; }
         .btn-talk { background-color: var(--primary-audio); }
         
-        /* Grid 4 Thông số */
         .grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .card { background: var(--card-bg); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
         .card-title { font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
@@ -34,44 +36,39 @@
         .c-food { color: var(--primary-food); } .c-water { color: var(--primary-water); }
         .bg-ok { background: #e8f8f5; color: var(--success); } .bg-warn { background: #fdedec; color: var(--danger); }
         
-        /* Nút Điều khiển */
         .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-action { flex: 1; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+        .btn-action { flex: 1; border: none; padding: 15px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: 0.3s; }
+        .btn-action:active { transform: scale(0.95); opacity: 0.8; }
         .feed { background: var(--primary-food); } .pump { background: var(--primary-water); }
 
-        /* Lịch trình */
         .sch-item { display: flex; justify-content: space-between; background: #f9f9f9; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; border: 1px solid #eee;}
         .btn-add { width: 100%; padding: 12px; border: 2px dashed #ccc; background: #fafafa; border-radius: 8px; cursor: pointer; color: #666; font-weight: bold; }
         
-        /* Cài đặt Slider */
         .set-row { margin-bottom: 15px; }
         .set-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
         input[type=range] { width: 100%; height: 6px; background: #ddd; border-radius: 5px; outline: none; -webkit-appearance: none; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; }
-        #sl-food::-webkit-slider-thumb, #sl-daily::-webkit-slider-thumb { background: var(--primary-food); } 
-        #sl-water::-webkit-slider-thumb { background: var(--primary-water); }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; background: #555; }
 
-        /* Nhật ký */
         #log-container { font-size: 12px; color: #555; max-height: 150px; overflow-y: auto; }
         .log-line { padding: 6px 0; border-bottom: 1px dashed #eee; }
         .log-time { color: #999; font-weight: bold; margin-right: 5px; }
-        
-        /* Chỉnh Canvas Biểu đồ */
         .chart-container { position: relative; height: 200px; width: 100%; }
     </style>
 </head>
 <body>
-    <div class="header">🐾 Trạm Thú Cưng AI</div>
+
+    <div class="header">🐾 Trạm Thú Cưng AI (Firebase)</div>
+
     <div class="container">
         
         <div class="box-section" style="padding: 10px;">
             <div class="cam-container">
                 <div class="live-badge">● LIVE</div>
-                <img id="cam-stream" src="" onerror="this.src='https://via.placeholder.com/400x300?text=Camera+ESP32'">
+                <img id="cam-stream" src="https://via.placeholder.com/400x300?text=Camera+ESP32+AI" alt="Stream">
             </div>
             <div class="audio-controls">
-                <button class="btn-audio btn-listen" onclick="wakeUp()"><span>🔊</span> ĐÁNH THỨC CAM</button>
-                <button class="btn-audio btn-talk" onclick="wakeUp()"><span>🎤</span> GIỮ ĐỂ NÓI</button>
+                <button class="btn-audio btn-listen" onclick="sendAction('wake')"><span>🔊</span> ĐÁNH THỨC CAM</button>
+                <button class="btn-audio btn-talk" onclick="alert('Tính năng đang phát triển...')"><span>🎤</span> GIỮ ĐỂ NÓI</button>
             </div>
         </div>
 
@@ -79,7 +76,7 @@
             <div class="card">
                 <div class="card-title">Bát Thức Ăn</div>
                 <div class="card-val c-food"><span id="bowl-food">0</span>g</div>
-                <div class="card-sub bg-ok" id="stt-bowl-food">Đang trống</div>
+                <div class="card-sub bg-ok" id="stt-bowl-food">Bình thường</div>
             </div>
             <div class="card">
                 <div class="card-title">Hôm Nay Đã Ăn</div>
@@ -89,18 +86,22 @@
             <div class="card">
                 <div class="card-title">Khay Nước</div>
                 <div class="card-val c-water" id="bowl-water">--</div>
-                <div class="card-sub bg-ok" id="stt-bowl-water">--</div>
+                <div class="card-sub bg-ok" id="stt-bowl-water">Sẵn sàng</div>
             </div>
             <div class="card">
                 <div class="card-title">Bình Nước Tổng</div>
                 <div class="card-val c-water" id="tank-water">--</div>
-                <div class="card-sub bg-ok" id="stt-tank-water">--</div>
+                <div class="card-sub bg-ok" id="stt-tank-water">Sẵn sàng</div>
             </div>
         </div>
 
         <div class="action-row">
-            <button class="btn-action feed" onclick="sendAction('feed')"><span style="font-size: 20px;">🦴</span> NHẢ HẠT NGAY</button>
-            <button class="btn-action pump" onclick="sendAction('pump')"><span style="font-size: 20px;">💦</span> BƠM NƯỚC</button>
+            <button class="btn-action feed" onclick="sendAction('feed')">
+                <span style="font-size: 20px;">🦴</span> NHẢ HẠT NGAY
+            </button>
+            <button class="btn-action pump" onclick="sendAction('pump')">
+                <span style="font-size: 20px;">💦</span> BƠM NƯỚC
+            </button>
         </div>
 
         <div class="box-section">
@@ -110,7 +111,7 @@
         </div>
 
         <div class="box-section">
-            <div class="box-title">📊 Thống kê lượng ăn trong ngày (24h)</div>
+            <div class="box-title">📊 Thống kê lượng ăn (24h)</div>
             <div class="chart-container">
                 <canvas id="foodChart"></canvas>
             </div>
@@ -119,15 +120,15 @@
         <div class="box-section">
             <div class="box-title">⚙️ Cài đặt & Giới hạn</div>
             <div class="set-row">
-                <div class="set-label"><span>Giới hạn ăn 1 ngày:</span><span class="c-food"><span id="val-sl-daily">150</span> g</span></div>
+                <div class="set-label"><span>Ăn tối đa 1 ngày:</span><span class="c-food"><span id="val-sl-daily">150</span> g</span></div>
                 <input type="range" id="sl-daily" min="50" max="500" step="10" value="150" onchange="updateSettings()">
             </div>
             <div class="set-row">
-                <div class="set-label"><span>Mức bát đầy (mỗi lần nhả):</span><span class="c-food"><span id="val-sl-food">50</span> g</span></div>
+                <div class="set-label"><span>Mức bát đầy:</span><span class="c-food"><span id="val-sl-food">50</span> g</span></div>
                 <input type="range" id="sl-food" min="10" max="200" step="5" value="50" onchange="updateSettings()">
             </div>
             <div class="set-row">
-                <div class="set-label"><span>Thời gian bơm mỗi lần:</span><span class="c-water"><span id="val-sl-water">3</span> s</span></div>
+                <div class="set-label"><span>Thời gian bơm:</span><span class="c-water"><span id="val-sl-water">3</span> s</span></div>
                 <input type="range" id="sl-water" min="1" max="20" step="1" value="3" onchange="updateSettings()">
             </div>
         </div>
@@ -140,22 +141,32 @@
     </div>
 
     <script>
-        // Bắt sóng Server Đám Mây Render qua WebSocket
-        const HOST = location.origin.replace(/^http/, 'ws');
-        const ws = new WebSocket(HOST);
-        ws.binaryType = 'blob';
+        // --- 2. CẤU HÌNH FIREBASE (HÃY THAY THÔNG SỐ CỦA BẠN VÀO ĐÂY) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSy...", 
+            authDomain: "smartpetfeeder-1bb88.firebaseapp.com",
+            databaseURL: "https://smartpetfeeder-1bb88-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "smartpetfeeder-1bb88",
+            storageBucket: "smartpetfeeder-1bb88.appspot.com",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        // Khởi tạo Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
         let myChart;
         let schedules = [];
 
-        // Khởi tạo Biểu đồ 24 Giờ (Bar Chart)
+        // --- KHỞI TẠO BIỂU ĐỒ ---
         const ctx = document.getElementById('foodChart').getContext('2d');
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: Array.from({length: 24}, (_, i) => i + 'h'),
                 datasets: [{ 
-                    label: 'Gram thức ăn', 
+                    label: 'Gram', 
                     data: new Array(24).fill(0), 
                     backgroundColor: 'rgba(243, 156, 18, 0.7)',
                     borderColor: '#f39c12',
@@ -164,8 +175,7 @@
                 }]
             },
             options: { 
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } }, 
                 scales: { 
                     y: { beginAtZero: true, suggestedMax: 50 },
@@ -174,76 +184,48 @@
             }
         });
 
-        // Xử lý dữ liệu nhận từ ESP32 & Đám mây
-        ws.onmessage = (event) => {
-            // 1. Nếu là Video Camera
-            if (event.data instanceof Blob) {
-                const url = URL.createObjectURL(event.data);
-                document.getElementById('cam-stream').src = url;
-                document.getElementById('cam-stream').onload = () => URL.revokeObjectURL(url);
-            } 
-            // 2. Nếu là Dữ liệu JSON
-            else {
-                try {
-                    let data = JSON.parse(event.data);
-                    
-                    // Nạp dữ liệu Init lúc mới vào web
-                    if (data.type === 'init') {
-                        schedules = data.schedules || [];
-                        renderSchedules();
-                        if(data.activityLogs) {
-                            document.getElementById('log-container').innerHTML = '';
-                            data.activityLogs.forEach(addLogToUI);
-                        }
-                    }
+        // --- 3. LẮNG NGHE DỮ LIỆU TỪ MẠCH (REALTIME) ---
+        database.ref('status').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
 
-                    // Cập nhật Biểu đồ 24h
-                    if (data.type === 'hourly_update') {
-                        myChart.data.datasets[0].data = data.hourlyData;
-                        myChart.update();
-                    }
-
-                    // Cập nhật 4 Ô Thông Số
-                    if (data.weight !== undefined) {
-                        document.getElementById('bowl-food').innerText = data.weight;
-                        document.getElementById('stt-bowl-food').innerText = data.weight >= (data.limit||50) ? "Đã đầy" : "Bình thường";
-                        document.getElementById('stt-bowl-food').className = data.weight >= (data.limit||50) ? "card-sub bg-warn" : "card-sub bg-ok";
-                    }
-                    if (data.totalFoodToday !== undefined) {
-                        document.getElementById('food-today').innerText = data.totalFoodToday;
-                        document.getElementById('limit-display').innerText = data.dailyLimit || 150;
-                        if (data.totalFoodToday >= (data.dailyLimit || 150)) {
-                            document.getElementById('stt-food-today').innerText = "Hết tiêu chuẩn!";
-                            document.getElementById('stt-food-today').className = "card-sub bg-warn";
-                        } else {
-                            document.getElementById('stt-food-today').innerText = `Còn ${(data.dailyLimit || 150) - data.totalFoodToday}g`;
-                            document.getElementById('stt-food-today').className = "card-sub bg-ok";
-                        }
-                    }
-                    if (data.waterBowl !== undefined) {
-                        document.getElementById('bowl-water').innerText = data.waterBowl ? "CẠN" : "ĐẦY";
-                        document.getElementById('stt-bowl-water').innerText = data.waterBowl ? "Cần bơm" : "Sẵn sàng";
-                        document.getElementById('stt-bowl-water').className = data.waterBowl ? "card-sub bg-warn" : "card-sub bg-ok";
-                    }
-                    if (data.waterTank !== undefined) {
-                        document.getElementById('tank-water').innerText = data.waterTank ? "CÒN" : "HẾT"; 
-                        document.getElementById('stt-tank-water').innerText = data.waterTank ? "Sẵn sàng" : "Châm thêm!";
-                        document.getElementById('stt-tank-water').className = data.waterTank ? "card-sub bg-ok" : "card-sub bg-warn";
-                    }
-                } catch(e) {}
+            // Bát thức ăn
+            if (data.weight !== undefined) {
+                const w = Math.round(data.weight);
+                document.getElementById('bowl-food').innerText = w;
+                const limit = document.getElementById('sl-food').value;
+                document.getElementById('stt-bowl-food').innerText = w >= limit ? "Đã đầy" : "Bình thường";
+                document.getElementById('stt-bowl-food').className = w >= limit ? "card-sub bg-warn" : "card-sub bg-ok";
             }
-        };
 
-        function wakeUp() { /* Hàm đánh thức Camera từ Web */ }
+            // Khay nước & Bình tổng
+            if (data.bowl_empty !== undefined) {
+                document.getElementById('bowl-water').innerText = data.bowl_empty ? "CẠN" : "ĐẦY";
+                document.getElementById('stt-bowl-water').innerText = data.bowl_empty ? "Cần bơm" : "Sẵn sàng";
+                document.getElementById('stt-bowl-water').className = data.bowl_empty ? "card-sub bg-warn" : "card-sub bg-ok";
+            }
+            if (data.tank_full !== undefined) {
+                document.getElementById('tank-water').innerText = data.tank_full ? "CÒN" : "HẾT"; 
+                document.getElementById('stt-tank-water').innerText = data.tank_full ? "Sẵn sàng" : "Cần châm";
+                document.getElementById('stt-tank-water').className = data.tank_full ? "card-sub bg-ok" : "card-sub bg-warn";
+            }
+        });
 
+        // Lắng nghe dữ liệu biểu đồ
+        database.ref('hourly_data').on('value', (snapshot) => {
+            const hourly = snapshot.val();
+            if (hourly) {
+                myChart.data.datasets[0].data = hourly;
+                myChart.update();
+            }
+        });
+
+        // --- 4. GỬI LỆNH ĐIỀU KHIỂN ---
         function sendAction(cmd) {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(cmd);
-                addLogToUI(cmd === 'feed' ? "Chủ nhân vừa nhả hạt thủ công" : "Chủ nhân vừa bơm nước thủ công");
-                alert(cmd === 'feed' ? 'Đã gửi lệnh Nhả hạt!' : 'Đã gửi lệnh Bơm nước!');
-            } else {
-                alert('Mất kết nối với Đám mây!');
-            }
+            database.ref('control').set(cmd)
+                .then(() => {
+                    addLogToUI(cmd === 'feed' ? "Yêu cầu nhả hạt..." : (cmd === 'pump' ? "Yêu cầu bơm nước..." : "Đánh thức Camera..."));
+                });
         }
 
         function updateSettings() {
@@ -254,43 +236,51 @@
             document.getElementById('val-sl-daily').innerText = daily;
             document.getElementById('val-sl-food').innerText = f;
             document.getElementById('val-sl-water').innerText = w;
+            document.getElementById('limit-display').innerText = daily;
             
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'settings', dailyLimit: daily, feedLimit: f, pumpTime: w }));
-                addLogToUI("Đã cập nhật các thông số giới hạn");
-            }
+            database.ref('settings').set({
+                dailyLimit: parseInt(daily),
+                feedLimit: parseInt(f),
+                pumpTime: parseInt(w)
+            });
+            addLogToUI("Cập nhật cấu hình");
         }
+
+        // --- QUẢN LÝ LỊCH TRÌNH ---
+        database.ref('schedules').on('value', (snapshot) => {
+            schedules = snapshot.val() || [];
+            renderSchedules();
+        });
 
         function renderSchedules() {
             const list = document.getElementById('schedule-list');
-            if(schedules.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; margin-bottom:10px; font-size:13px;">Chưa có lịch trình nào</div>'; return; }
+            if(schedules.length === 0) { 
+                list.innerHTML = '<div style="text-align:center; color:#999; margin-bottom:10px; font-size:13px;">Chưa có lịch</div>'; 
+                return; 
+            }
             list.innerHTML = schedules.map((s, i) => `
                 <div class="sch-item">
-                    <span><span style="font-size:16px;">⏱️</span> <b>${s.time}</b> - Nhả ${s.amount}g</span>
-                    <span style="color:var(--danger); cursor:pointer; font-weight:bold;" onclick="removeSch(${i})">XÓA</span>
+                    <span>⏱️ <b>${s.time}</b> - ${s.amount}g</span>
+                    <span style="color:var(--danger); cursor:pointer;" onclick="removeSch(${i})">XÓA</span>
                 </div>
             `).join('');
         }
 
         function addSchedule() {
-            let time = prompt("Nhập giờ cho ăn (Ví dụ: 07:30):");
+            let time = prompt("Giờ ăn (HH:mm):", "08:00");
             if(!time) return;
-            let amount = prompt("Nhập lượng hạt muốn nhả (Gram):", "50");
+            let amount = prompt("Lượng hạt (g):", "50");
             if(time && amount) {
-                schedules.push({ time, amount });
-                renderSchedules();
-                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_schedule', data: schedules }));
-                addLogToUI("Đã thêm lịch ăn lúc " + time);
+                schedules.push({ time, amount: parseInt(amount) });
+                database.ref('schedules').set(schedules);
+                addLogToUI("Thêm lịch ăn: " + time);
             }
         }
 
         function removeSch(i) {
             if(confirm("Xóa lịch này?")) {
-                let t = schedules[i].time;
                 schedules.splice(i, 1);
-                renderSchedules();
-                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_schedule', data: schedules }));
-                addLogToUI("Đã xóa lịch lúc " + t);
+                database.ref('schedules').set(schedules);
             }
         }
 
@@ -299,7 +289,6 @@
             const now = new Date();
             const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
             container.innerHTML = `<div class="log-line"><span class="log-time">[${timeStr}]</span> ${text}</div>` + container.innerHTML;
-            if (!text.includes("init") && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'log', text: text }));
         }
     </script>
 </body>
